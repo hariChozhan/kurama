@@ -17,6 +17,7 @@ class FrameTransformer(Node):
         world_point.point.y = 2.0
         world_point.point.z = 3.0
 
+        
         try:
             vehicle_point = self.buffer.transform(world_point, "vehicle")
             # "vehicle" should be the target frame
