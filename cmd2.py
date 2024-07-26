@@ -1,0 +1,72 @@
+import rclpy
+from rclpy.node import Node
+from geometry_msgs.msg import Pose, Twist
+from tf_transformations import euler_from_quaternion
+import math
+
+class FollowObjectNode(Node):
+    def __init__(self):
+        super().__init__('follow_object')
+        self.pose_subscriber = self.create_subscription(
+            Pose,
+            'pose_topic',
+            self.pose_callback,
+            10
+        )
+        self.cmd_vel_publisher = self.create_publisher(
+            Twist,
+            'cmd_vel',
+            10
+        )
+        self.target_pose = None
+        self.max_speed = 1.0
+        self.speed_increment = 0.05
+
+    def pose_callback(self, msg):
+        self.target_pose = msg
+        self.move_towards_target()
+
+    def move_towards_target(self):
+        if self.target_pose is None:
+            return
+
+        # Calculate the distance
+        robot_x, robot_y = 0.0, 0.0  # Assuming the robot starts at the origin
+        target_x, target_y = self.target_pose.position.x, self.target_pose.position.y
+
+        distance = math.sqrt((target_x - robot_x) ** 2 + (target_y - robot_y) ** 2)
+        self.get_logger().info(f'Distance to target: {distance:.2f} meters')
+
+        twist = Twist()
+
+        if distance < 2.0:
+            self.get_logger().info('Target is within 2 meters. Stopping.')
+            twist.linear.x = 0.0
+            twist.angular.z = 0.0
+        else:
+            # Calculate the angle to the target
+            angle_to_target = math.atan2(target_y - robot_y, target_x - robot_x)
+            yaw = euler_from_quaternion([
+                self.target_pose.orientation.x,
+                self.target_pose.orientation.y,
+                self.target_pose.orientation.z,
+                self.target_pose.orientation.w
+            ])[2]
+
+            twist.angular.z = angle_to_target - yaw
+
+            # Calculate speed based on distance
+            speed = min(self.max_speed, (distance - 2.0) * self.speed_increment)
+            twist.linear.x = speed
+
+        self.cmd_vel_publisher.publish(twist)
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = FollowObjectNode()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
