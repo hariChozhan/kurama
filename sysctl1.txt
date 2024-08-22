@@ -1,0 +1,48 @@
+
+
+We are trying to launch a ROS2 subscriber node and publisher node on boot. We are using a systemd service file to launch our launch.py file. When running systemctl status and viewing the systemctl log, we can see our nodes running and communicating. However, when we run ros2 topic list, we cannot see the topic over which the nodes are communicating. Why is this and how do we “re-route” the information from the systemctl logs to ROS2 such that we can view the topic and messages directly in ROS2?
+
+(We confirmed that the nodes themselves work when running ros2 run <node_name>. Here is the service file:
+
+[Unit]
+Description=ROS 2 Node Launch Service
+
+[Service]
+Type=simple
+Environment="HOME=root"
+ExecStart=/usr/local/bin/worm7_ros2_launch.sh
+
+[Install]
+WantedBy=multi-user.target
+
+Here is the bash file:
+
+#!/bin/bash
+source /home/worm7/worms_ws/install/setup.bash
+
+ros2 launch startup startup.launch.py
+
+Here is the launch file:
+
+from launch_ros.actions import Node
+
+def generate_launch_description():
+    return LaunchDescription([
+        Node(
+            package='startup',
+            namespace='startup',
+            executable='listener',
+            name='listener'
+        ),
+        Node(
+            package='startup',
+            namespace = 'startup',
+            executable='talker',
+            name='talker'
+        )
+        
+    ])
+
+The code for the publisher and subscriber nodes can be found here: https://docs.ros.org/en/iron/Tutorials/Beginner-Client-Libraries/Writing-A-Simple-Py-Publisher-And-Subscriber.html
+
+Any help is appreciated. Thank you.
