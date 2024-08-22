@@ -1,0 +1,59 @@
+
+
+Thanks to @Kamil Maciorowski, I have a solution. Three steps:
+
+    Define a master service, master.service, as following:
+
+[Unit]
+Description=tmux master service
+
+[Service]
+Type=forking
+User=lancer
+ExecStart=/usr/bin/tmux new-session -s master -d
+ExecStop=/usr/bin/tmux kill-session -t master
+
+[Install]
+WantedBy=multi-user.target
+
+    Define the first service, test1.service, as following:
+
+[Unit]
+Description=tmux test 1 service
+PartOf=master.service
+After=master.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=lancer
+ExecStart=/usr/bin/tmux new-session -s test1 -d
+ExecStop=/usr/bin/tmux kill-session -t test1
+
+[Install]
+WantedBy=multi-user.target
+
+    Define the second service, test2.service, as following:
+
+[Unit]
+Description=tmux test 2 service
+PartOf=master.service
+After=master.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+User=lancer
+ExecStart=/usr/bin/tmux new-session -s test2 -d
+ExecStop=/usr/bin/tmux kill-session -t test2
+
+[Install]
+WantedBy=multi-user.target
+
+Notes:
+
+    @Kamil Maciorowski explains why forking and oneshot are used.
+    The master.service creates a dummy tmux session called master that does nothing but hosts the other actual tmux sessions.
+    In the test1 and test2 services, After is to make sure at boot-up, the test1 and test2 services start after the master service.
+    In the test1 and test2 services, PartOf is to make sure that if the master stoped, the test1 and test2 services also stop. Without this, if master stops, test1 and test2 statuses show they are still active.
+
